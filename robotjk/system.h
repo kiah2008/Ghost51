@@ -1,5 +1,4 @@
 
-
 #ifndef __SYSTEM_H
 #define __SYSTEM_H
 
@@ -12,35 +11,29 @@
 #include "reg52x2.h"
 #endif
 
-/*
-1、类型定义兼容C#，尽可能用C#标准，常用的为int
-2、char在C#中为16bit的unicode，keil C下为8bit
-*/
+#include "device.h"
+
 //8bit
-//typedef char				sbyte;	    /*char 不能用于负数，实际测试跟unsigned char等价*/
-typedef unsigned char		byte;       /*实际测试byte = char*/
+typedef unsigned char byte;
 //16bit
-//typedef short			short
-typedef unsigned short		ushort;
+typedef unsigned short ushort;
 //32bit
-//typedef int				int;
-typedef unsigned int	 	uint;
+typedef unsigned int uint;
 
-//字符串
-typedef char *			    string;
+typedef char * string;
 
-typedef unsigned char		bool;
+typedef unsigned char bool;
 
 typedef void (*function)(void);
+
 #define Function(address)	(*(function)address)()
 
 #define S_CACHE_SIZE 16
 typedef struct {
-	byte cache[S_CACHE_SIZE +1];
+	byte cache[S_CACHE_SIZE + 1];
 	byte size;
-}s_cache_t;
+} s_cache_t;
 
-/*定义常量*/
 #define true				1
 #define false				0
 #define null                ((void *) 0)		/*Stdlib.h and String.h already include NULL */
@@ -68,43 +61,38 @@ typedef struct {
 
 #define Assert(express)  if (!(express)){printf("\nASSERT: " #express "\n");}   //(void)0
 
-
-typedef enum
-{
-    KeyMessageType      = 0xFF,
-	InputMessageType = 0xF5,
-	DisplayMessageType = 0xF4,
-	ExternalInterrupt = 0xF3,
-    PherialMessageType =0xF2,
+typedef enum {
+	TimerMessageType = 0xF0 /*最小值,不允许有值小于它*/,
 	SystemTickMessageType = 0xF1,
-    TimerMessageType    = 0xF0  /*最小值,不允许有值小于它*/
-}MessageType;
-
-
-#include "device.h"
+	PherialMessageType = 0xF2,
+	ExternalInterrupt = 0xF3,
+	DisplayMessageType = 0xF4,
+	InputMessageType = 0xF5,
+	KeyMessageType = 0xFF
+} MessageType;
 
 extern void EnterCritical(void);
-extern void ExitCritical(void);
+extern void exitCritical(void);
 
-extern void InitializeMessageQueue(void);
-extern void SendMessage(MessageType messageType, ushort value);
-extern ushort PendMessageQueue(void);
+extern void initializeMessageQueue(void);
+extern void sendMessage(MessageType messageType, ushort value);
+extern ushort pendMessageQueue(void);
 
-extern void Delay(uint delayClock);
+extern void delay(uint delayClock);
 
-extern void DelayUs(uint delayTime);
+extern void delayUs(uint delayTime);
 
-extern void DelayMs(uint delayTime);
+extern void delayMs(uint delayTime);
 
-
-extern byte HexToAscii(byte hex);
+extern byte hexToAscii(byte hex);
 
 extern void PutByte(byte byte);
 extern void PutString(string string, byte sum);
 
-extern bool TimerStart(TimerhandleMode handleMode, ushort delay, function callBackFunction);
-extern void TimerStop(byte id);
-extern void HandleTimerSystem(void);
+extern bool timerStart(TimerhandleMode handleMode, ushort delay,
+		function callBackFunction);
+extern void timerStop(byte id);
+extern void handleTimerSystem(void);
 extern void display(ushort num);
 
 #endif

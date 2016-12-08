@@ -11,11 +11,11 @@ static byte idata State = 0;
 static TimerhandleMode idata Mode;
 static struct Timer idata Block[TimerSum];
 
-void TimerSystemTickService(void) {
-	SendMessage(SystemTickMessageType, 0);
+void timerSystemTickService(void) {
+	sendMessage(SystemTickMessageType, 0);
 }
 
-void HandleTimerSystem(void) {
+void handleTimerSystem(void) {
 	byte i = 0;
 	byte stateCopy;
 
@@ -37,13 +37,13 @@ void HandleTimerSystem(void) {
 		stateCopy = stateCopy >> 1;
 		i++;
 	}
-	ExitCritical();
+	exitCritical();
 }
 
 /**
  * delay, ms
  */
-bool TimerStart(TimerhandleMode handleMode, ushort delay,
+bool timerStart(TimerhandleMode handleMode, ushort delay,
 		function callBackFunction) {
 	byte i;
 
@@ -60,21 +60,21 @@ bool TimerStart(TimerhandleMode handleMode, ushort delay,
 			}
 
 			SetBit(State, i);
-			ExitCritical();
+			exitCritical();
 			return (i);
 		}
 	}
-	ExitCritical();
+	exitCritical();
 	return (INVALID);
 }
 
-void TimerStop(byte id) {
+void timerStop(byte id) {
 	Assert(id < TimerSum);
 
-	ExitCritical();
+	exitCritical();
 
 	ResetBit(State, id);
 
-	ExitCritical();
+	exitCritical();
 }
 

@@ -15,24 +15,25 @@ static byte CriticalNesting = 0;
 byte code HextoAscii[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
 		'A', 'B', 'C', 'D', 'E', 'F' };
 
-void Delay(uint delayClock) {
-	byte x,j;
-	for(j=0;j<delayClock;j++)
-	for(x=0;x<=148;x++);
+void delay(uint delayClock) {
+	byte x, j;
+	for (j = 0; j < delayClock; j++)
+		for (x = 0; x <= 148; x++)
+			;
 }
 
-void DelayUs(uint delayTime) {
+void delayUs(uint delayTime) {
 	while (delayTime--)
 		;
 }
 
-void DelayMs(uint delayTime) {
+void delayMs(uint delayTime) {
 	while (delayTime--) {
-		DelayUs(1000);
+		delayUs(1000);
 	}
 }
 
-void Delay10Ms(uint delayTime) {
+void delay10Ms(uint delayTime) {
 	uint i, j;
 	for (i = 0; i < delayTime; i++)
 		for (j = 0; j < 1827; j++)
@@ -40,13 +41,13 @@ void Delay10Ms(uint delayTime) {
 			;
 }
 
-byte HexToAscii(byte hex) {
+byte hexToAscii(byte hex) {
 	Assert(hex < 16);
 
 	return HextoAscii[hex];
 }
 
-void EnterCritical(void) {
+void enterCritical(void) {
 	if (CriticalNesting == 0) {
 		EaSave = EA;
 		EA = 0;
@@ -54,7 +55,7 @@ void EnterCritical(void) {
 	CriticalNesting++;
 }
 
-void ExitCritical(void) {
+void exitCritical(void) {
 	if (CriticalNesting > 0) {
 		CriticalNesting--;
 		if (CriticalNesting == 0) {
@@ -63,7 +64,7 @@ void ExitCritical(void) {
 	}
 }
 
-void InitializeMessageQueue(void) {
+void initializeMessageQueue(void) {
 	MessageQueue.In = 0;
 	MessageQueue.Out = 0;
 	MessageQueue.Entries = 0;
@@ -76,12 +77,12 @@ void InitializeMessageQueue(void) {
  *             value:消息值，MessageTimer类型为16bit地址，其他类型下都是8bit数据
  * 返回参数  : 无
  *****************************************************************************/
-void SendMessage(MessageType messageType, ushort value) {
+void sendMessage(MessageType messageType, ushort value) {
 	ushort* input = null;
-	EnterCritical();
+	enterCritical();
 	if (MessageQueue.Entries >= MessageBufferSum) {
 		//full
-		ExitCritical();
+		exitCritical();
 		return;
 	}
 
@@ -96,21 +97,21 @@ void SendMessage(MessageType messageType, ushort value) {
 	MessageQueue.In = (MessageQueue.In + 1 + MessageQueue.Out)
 			% MessageBufferSum;
 	MessageQueue.Entries++;
-	ExitCritical();
+	exitCritical();
 	return;
 }
 
-ushort PendMessageQueue(void) {
+ushort pendMessageQueue(void) {
 	ushort * out;
 
 	while (MessageQueue.Entries == 0)
 		;
-	EnterCritical();
+	enterCritical();
 	out = (ushort*) (MessageBuffer + MessageQueue.Out);
 	MessageQueue.Out = (MessageQueue.Out + 1) % MessageBufferSum;
 	MessageQueue.Entries--;
 
-	ExitCritical();
+	exitCritical();
 	return (*out);
 }
 

@@ -18,11 +18,11 @@ byte getMatrixKey() {
  * 输入参数  : 无
  * 返回参数  : byte类型按键扫描值
  *****************************************************************************/
-static byte ScandPin(void) {
+static byte scandPin(void) {
 	byte i, j, temp, Buffer[4] = { 0xef, 0xdf, 0xbf, 0x7f };
 	for (j = 0; j < 4; j++) {
 		P1 = Buffer[j];
-		DelayUs(5);
+		delayUs(5);
 		temp = 0x01;
 		for (i = 0; i < 4; i++) {
 			if (!(P1 & temp)) {
@@ -34,10 +34,10 @@ static byte ScandPin(void) {
 	return INVALID;
 }
 
-void KeySystemTickService(void) {
+void keySystemTickService(void) {
 	byte scanValue;
 	byte rp1;
-	if(JitterCounter!=0) {
+	if (JitterCounter != 0) {
 		JitterCounter--;
 		return;
 	}
@@ -45,14 +45,14 @@ void KeySystemTickService(void) {
 	rp1 = P1;
 	P1 = 0xf0;
 	if (P1 != 0xf0) {
-		Delay(15);	//按键消抖
-		scanValue = ScandPin();
+		delay(15);	//按键消抖
+		scanValue = scandPin();
 		ScanValueSave = scanValue;
-		display((KeyMessageType<<8)+ScanValueSave);
+		display((KeyMessageType << 8) + ScanValueSave);
 		JitterCounter = JitterInterval;
 	}
-	P1=rp1;
-	ExitCritical();
+	P1 = rp1;
+	exitCritical();
 
 //   if (scanValue == INVALID)
 //	{

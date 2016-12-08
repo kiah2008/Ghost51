@@ -2,7 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-char putchar(char c) {
+s_cache_t* s_rcache = null;
+
+char putChar(char c) {
 	if (c == '\n') {
 		ES = 0;
 		SBUF = '\r';
@@ -20,17 +22,16 @@ char putchar(char c) {
 	return (1);
 }
 
-void PutByte(byte byte) {
+void putByte(byte byte) {
 	ES = 0;
 	SBUF = byte;
 	while (!TI)
 		;
 	TI = 0;
-
 	ES = 1;
 }
 
-void PutString(string string, byte sum) {
+void putString(string string, byte sum) {
 	byte i;
 	if (sum) {
 		i = sum;
@@ -38,7 +39,7 @@ void PutString(string string, byte sum) {
 			PutByte(*string++);
 		}
 	} else {
-		while (*string) {
+		while (string != null) {
 			if (*string == '\n') {
 				PutByte('\r');
 			}
@@ -47,7 +48,7 @@ void PutString(string string, byte sum) {
 	}
 }
 
-void InitializeTrace(void) {
+void initializeTrace(void) {
 	ES = 0;
 	ET1 = 0;
 
@@ -63,8 +64,7 @@ void InitializeTrace(void) {
 	ES = 1;
 }
 
-s_cache_t* s_rcache = null;
-static void UartInterruptHandler(void)
+static void comInterruptHandler(void)
 interrupt 4
 {
 	ES = 0;
