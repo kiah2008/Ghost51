@@ -1,80 +1,94 @@
-#include "system.h"
+/*
+ * device_timer.c
+ *
+ *  Created on: 2016年12月10日
+ *      Author: Kiah
+ */
+#ifdef TIMER_SUPPORT
+#include "data_type.h"
+#include "device.h"
+#include "system_queue.h"
+#include "misc_utils.h"
+#include <string.h>
+#include <stdio.h>
+
+#include "stc516rd.h"
 
 struct Timer {
-	ushort Delay;
-	function CallBackFuction;
+    rtc_t* delay;
+    function callback;
 };
 
-#define TimerSum		0x4
+#define TIMER_SUM		0x4
 
-static byte idata State = 0;
-static TimerhandleMode idata Mode;
-static struct Timer idata Block[TimerSum];
+static byte idata TimerStateMask = 0;
+static struct Timer xdata Block[TIMER_SUM];
 
 void timerSystemTickService(void) {
-	sendMessage(SystemTickMessageType, 0);
+    sendMessage(MSG_TIMER, null);
 }
 
 void handleTimerSystem(void) {
-	byte i = 0;
-	byte stateCopy;
+    byte i = 0;
+    byte stateCopy;
 
-	if (State == 0x00) {
-		return;
-	}
+    if (TimerStateMask == 0x00) {
+        return;
+    }
 
-	EnterCritical();
+    enterCritical();
+    stateCopy = TimerStateMask;
+    while (stateCopy) {
+        if ((stateCopy & 0x01) == 1) {
+            if (isRtcTimeout(Block[i].delay)) {
+                (*(Block[i].callback))();
+                ResetBit(TimerStateMask, i);
+            }
+        }
 
-	stateCopy = State;
-	while (stateCopy) {
-		if ((stateCopy & 0x01) == 1) {
-			if ((--Block[i].Delay) == 0) {
-				(*(Block[i].CallBackFuction))();
-				ResetBit(State, i);
-			}
-		}
+        stateCopy = stateCopy >> 1;
+        i++;
+    }
+    exitCritical();
+}
 
-		stateCopy = stateCopy >> 1;
-		i++;
-	}
-	exitCritical();
+extern void free (void xdata *p); 
+
+/**
+ * delay, s
+ * @return, id or INVALID
+ */
+byte timerStart(ulong high, ulong low, function callback) {
+    byte i;
+    enterCritical();
+    for (i = 0; i < TIMER_SUM; i++) {
+        if (!GetBit(TimerStateMask, i)) {
+            Block[i].delay = getDelayRtc(high, low);
+            Block[i].callback = callback;
+            SetBit(TimerStateMask, i);
+            exitCritical();
+            return (i);
+        }
+    }
+    exitCritical();
+    return INVALID;
 }
 
 /**
- * delay, ms
+ * id, the timerStart returned
  */
-bool timerStart(TimerhandleMode handleMode, ushort delay,
-		function callBackFunction) {
-	byte i;
-
-	EnterCritical();
-
-	for (i = 0; i < TimerSum; i++) {
-		if (!GetBit(State, i)) {
-			Block[i].Delay = delay / 50;/*rtc will interrupt per 50ms*/
-			Block[i].CallBackFuction = callBackFunction;/*回调函数*/
-			if (handleMode) {
-				SetBit(Mode, i);
-			} else {
-				ResetBit(Mode, i);
-			}
-
-			SetBit(State, i);
-			exitCritical();
-			return (i);
-		}
-	}
-	exitCritical();
-	return (INVALID);
-}
-
 void timerStop(byte id) {
-	Assert(id < TimerSum);
+    if(id >= TIMER_SUM) {
+        return;
+    }
 
-	exitCritical();
-
-	ResetBit(State, id);
-
-	exitCritical();
+    enterCritical();
+    if (GetBit(TimerStateMask, id)) {
+        ResetBit(TimerStateMask, id);
+        free(Block[id].delay);
+        Block[id].callback = null;
+    }
+    exitCritical();
 }
+#endif
 

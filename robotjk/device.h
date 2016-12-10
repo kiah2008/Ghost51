@@ -1,34 +1,43 @@
+/*
+ * device.h
+ *
+ *  Created on: 2016Äê12ÔÂ10ÈÕ
+ *      Author: Kiah
+ */
 #ifndef __DEVICE_H
 #define __DEVICE_H
+#include "data_type.h"
 
 typedef enum {
-	TimerInterruptHandle = 0, TimerMessageHandle = 1
+    TimerInterruptHandle = 0, TimerMessageHandle = 1
 } TimerhandleMode;
 
-struct Rtc {
-	byte Second;
-	byte Minute;
-	byte Hour;
-	uint Day;
-};
+typedef struct {
+    unsigned long rtc_l; //4bit
+    unsigned long rtc_h;
+} rtc_t;
 
-typedef enum {
-	SystemTick10000, SystemTick1000, SystemTick100
-} SystemTick;
+//for uart
+extern void initializeUart(void);
+extern void putByte(byte byte);
+extern void putString(char* string, byte sum);
+extern void notifyInfo(ushort num);
 
-extern struct Rtc idata Rtc;
+extern void handleKeyService(void);
 
-extern void keySystemTickService(void);
-
-extern void rtcSystemTickService(void);
-
+// timer
 extern void timerSystemTickService(void);
-
-extern void initializeRtc(void);
-
-extern void InitializeTrace(void);
+extern void timerStop(byte id);
+extern void handleTimerSystem(void);
+extern byte timerStart(ulong high, ulong low, function callback);
 
 extern void initializeSystemTick(void);
+
+// for rtc
+extern bool isRtcTimeout(rtc_t* check);
+extern bool isRtcTimeout(rtc_t* check);
+extern rtc_t* getDelayRtc(ulong high, ulong low);
+extern void handleRtcService();
 
 #endif
 

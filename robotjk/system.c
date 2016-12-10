@@ -1,117 +1,122 @@
+/*
+ * system.c
+ *
+ *  Created on: 2016年12月10日
+ *      Author: Kiah
+ */
+
+#include <string.h>
 #include "system.h"
+#include "misc_utils.h"
+#include "stc516rd.h"
+#include "system_queue.h"
 
-#define MessageBufferSum 32
-struct MessageQueue { /* 定义一个队列*/
-	byte In; /* 插入一个消息  */
-	byte Out; /* 取出一个消息  */
-	byte Entries; /* 消息长度      */
-};
+byte code disp_table[16] = { 0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07,
+        0x7f,
+        0x6f, 0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71 };
+static bool code g_debug = true;
+static bool EASave;
+static byte volatile CriticalNesting = 0;
 
-static struct MessageQueue idata MessageQueue;
-static ushort idata MessageBuffer[MessageBufferSum];
+sbit KEYEXT0 = P3 ^ 2;    //INT0
+sbit KEYEXT1 = P3 ^ 3;
 
-static bool EaSave;
-static byte CriticalNesting = 0;
-byte code HextoAscii[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-		'A', 'B', 'C', 'D', 'E', 'F' };
+extern void initializeSystemTick(void);
+extern void initializeUart(void);
+extern byte uartSendData(char* sdata, byte len);
 
-void delay(uint delayClock) {
-	byte x, j;
-	for (j = 0; j < delayClock; j++)
-		for (x = 0; x <= 148; x++)
-			;
+void initialize(void) {
+    EA = 0;
+    initializeMessageQueue();
+    initializeSystemTick();
+    initializeUart();
+
+    IPLX0 = 1;
+    IPLX1 = 1;
+    IPLT0 = 1;
+    EX0 = 1;
+    EX1 = 1;
+    //timer 1 8bit reload, timer 0 mode 1 16bit
+    TMOD = 0X21;
+    ET0 = 1;
+    EA = 1;
+    TR0 = 1;
+    TR1 = 1;
+    if (g_debug)
+        uartSendData("init done!", 0);
 }
 
-void delayUs(uint delayTime) {
-	while (delayTime--)
-		;
+void notifyInfo(ushort num) {
 }
 
-void delayMs(uint delayTime) {
-	while (delayTime--) {
-		delayUs(1000);
-	}
-}
-
-void delay10Ms(uint delayTime) {
-	uint i, j;
-	for (i = 0; i < delayTime; i++)
-		for (j = 0; j < 1827; j++)
-			//这个是通过软件仿真得出的数
-			;
-}
-
-byte hexToAscii(byte hex) {
-	Assert(hex < 16);
-
-	return HextoAscii[hex];
+void display(ushort num) {
+    int i = 0;
+    byte rp0 = 0xF;
+    byte rp1 = 0xF;
+    byte bits[4];
+    byte j = 0;
+    bits[0] = (num >> 12) & 0x0F;
+    bits[1] = (num >> 8) & 0x0F;
+    bits[2] = (num >> 4) & 0x0F;
+    bits[3] = num & 0x0F;
+    enterCritical();
+    rp0 = P0;
+    rp1 = P2;
+    for (i = 0; i < 60; i++) {
+        for (j = 0; j < 4; j++) {
+            P0 = disp_table[bits[j]]; //LED Value
+            P2 = j; //bit select
+            delay(5);
+        }
+    }
+    exitCritical();
+    delay(10);
 }
 
 void enterCritical(void) {
-	if (CriticalNesting == 0) {
-		EaSave = EA;
-		EA = 0;
-	}
-	CriticalNesting++;
+    if (CriticalNesting == 0) {
+        EASave = EA;
+        EA = 0;
+    }
+    CriticalNesting++;
 }
 
 void exitCritical(void) {
-	if (CriticalNesting > 0) {
-		CriticalNesting--;
-		if (CriticalNesting == 0) {
-			EA = EaSave;
-		}
-	}
+    if (CriticalNesting > 0) {
+        CriticalNesting--;
+        if (CriticalNesting == 0) {
+            EA = EASave;
+        }
+    }
 }
 
-void initializeMessageQueue(void) {
-	MessageQueue.In = 0;
-	MessageQueue.Out = 0;
-	MessageQueue.Entries = 0;
+static void ExternalInterruptHandler0(void)
+interrupt 0 {
+    EA=0;
+    delay(5);
+    if(KEYEXT0 == 0) {
+        sendMessage(MSG_DUMP_STATE, null);
+    }
+    delay(5);
+    EA=1;
 }
 
-/*****************************************************************************
- * 函数名	: SendMessage
- * 描述	    : 发送消息
- * 输入参数  : message: 消息类型,
- *             value:消息值，MessageTimer类型为16bit地址，其他类型下都是8bit数据
- * 返回参数  : 无
- *****************************************************************************/
-void sendMessage(MessageType messageType, ushort value) {
-	ushort* input = null;
-	enterCritical();
-	if (MessageQueue.Entries >= MessageBufferSum) {
-		//full
-		exitCritical();
-		return;
-	}
+//static void ExternalInterruptHandler1(void)
+//interrupt 2 {
+//  EX1=0;
+//  Delay(1);
+//  if(P3^3 == 0) {
+//      displayValue=0;
+//      display((DisplayMessageType<<8) + displayValue);
+//  }
+//  Delay(3);
+//  EX1=1;
+//}
 
-	input = (ushort*) (MessageBuffer + MessageQueue.In);
-	if (messageType == TimerMessageType) {
-		*input = value;
-	} else {
-		((byte *) input)[0] = messageType;
-		((byte *) input)[1] = value & 0xFF;
-	}
+//dump context
+void dump() {
+    //RTC:h-m-s;Queue:((in+MESSAGE_QUEUE_NUM-out)%MESSAGE_QUEUE_NUM)/MESSAGE_QUEUE_NUM;
+    const char* format = "RTC:%d-%d-%s;Queue:%d";
 
-	MessageQueue.In = (MessageQueue.In + 1 + MessageQueue.Out)
-			% MessageBufferSum;
-	MessageQueue.Entries++;
-	exitCritical();
-	return;
-}
-
-ushort pendMessageQueue(void) {
-	ushort * out;
-
-	while (MessageQueue.Entries == 0)
-		;
-	enterCritical();
-	out = (ushort*) (MessageBuffer + MessageQueue.Out);
-	MessageQueue.Out = (MessageQueue.Out + 1) % MessageBufferSum;
-	MessageQueue.Entries--;
-
-	exitCritical();
-	return (*out);
 }
 
