@@ -18,7 +18,7 @@ typedef struct {
 } request_t;
 
 //#define CMD_SERIAL_MAGIC 0xEF
-#define CMD_SERIAL_MAGIC 0xEF
+#define CMD_SERIAL_MAGIC 'a'
 
 #define SERIAL_ERROR_OVERLOAD 1
 #define SERIAL_ERROR_RETRY 2
@@ -28,7 +28,7 @@ typedef struct {
 //#define SERIAL_CACHE_SIZE 1
 //static char* idata seria_cache[SERIAL_CACHE_SIZE];
 #define MAX_SERIAL_RECV_NUM 16
-#define MAX_SND_BLOCK_NUM 8
+//#define MAX_SND_BLOCK_NUM 8
 
 typedef struct _serial_data {
     byte* sdata;

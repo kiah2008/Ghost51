@@ -38,8 +38,6 @@ static byte scandPin(void) {
     return INVALID;
 }
 
-extern void notifyInfo(ushort num);
-
 void handleKeyService(void) {
     byte rp1;
     if (JitterCounter != 0) {

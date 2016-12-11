@@ -10,12 +10,11 @@
 #include "misc_utils.h"
 #include "stc516rd.h"
 #include "system_queue.h"
+#include "log.h"
 
 byte code led_table[16] = { 0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07,
         0x7f,
         0x6f, 0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71 };
-
-static bool code g_debug = true;
 static bool EASave;
 static byte volatile CriticalNesting = 0;
 
@@ -44,11 +43,13 @@ void initialize(void) {
     EA = 1;
     TR0 = 1;
     TR1 = 1;
-    if (g_debug)
-        uartSendData("init done!", 0);
-}
-
-void notifyInfo(ushort num) {
+    if(GetBit(PCON, 4) == 1) {
+        ResetBit(PCON, 4);
+        uartSendData("RDY", 0);
+    } else {
+        uartSendData("RST", 0);
+    }
+    WDT_CONTR = 0x35;
 }
 
 void display(ushort num) {
@@ -94,13 +95,13 @@ void exitCritical(void) {
 
 static void ExternalInterruptHandler0(void)
 interrupt 0 {
-    EA=0;
+    EX0=0;
     delay(5);
     if(KEYEXT0 == 0) {
-        sendMessage(MSG_DUMP_STATE, null);
+        sendMessage(MSG_KEY_MODE_CHANGE, 0);
     }
-    delay(5);
-    EA=1;
+    delay(100);
+    EX0=1;
 }
 
 //static void ExternalInterruptHandler1(void)

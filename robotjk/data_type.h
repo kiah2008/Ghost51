@@ -48,6 +48,8 @@ typedef struct {
 #define ES_OVERMAX  8
 #define ES_OVERCACHE  9
 #define ES_INVALID 10
+
+#define E_MEMORY_OVER 15
 #define E_UNKNOWN  0xEF
 
 #define Function(address)   (*(function)address)()

@@ -4,7 +4,7 @@
  *  Created on: 2016Äê12ÔÂ10ÈÕ
  *      Author: Kiah
  */
-
+#ifdef __RTC_SUPPORT__
 #include "data_type.h"
 #include "device.h"
 #include "system_queue.h"
@@ -13,7 +13,6 @@
 
 static rtc_t idata sRtc;
 
-#ifdef __RTC_SUPPORT__
 rtc_t* getRtc() {
     return &sRtc;
 }

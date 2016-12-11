@@ -27,24 +27,6 @@ typedef enum {
     STATE_INVALID = 0x7 //max allow value
 } SERIAL_STATE;
 
-char putChar(char c) {
-    if (c == '\n') {
-        ES = 0;
-        SBUF = '\r';
-        while (!TI)
-            ;
-        TI = 0;
-        ES = 1;
-    }
-    ES = 0;
-    SBUF = c;
-    while (!TI)
-        ;
-    TI = 0;
-    ES = 1;
-    return (1);
-}
-
 void putByte(byte byte) {
     ES = 0;
     SBUF = byte;
@@ -100,12 +82,13 @@ void restoreReceive() {
 
 byte uartSendData(char* sdata, byte len) {
     byte size = 0;
-    byte* snddata = null;
+    byte* serialdata = null;
     serial_data_t* snd_data = null;
     byte ret = E_OK;
-    if (MAX_SND_BLOCK_NUM <= serial_snd_size) {
-        return ES_OVERCACHE;
-    }
+//    if (MAX_SND_BLOCK_NUM <= serial_snd_size) {
+//        return ES_OVERCACHE;
+//    }
+
     if (len == 0) {
         //cstr
         size = strlen(sdata);
@@ -114,30 +97,30 @@ byte uartSendData(char* sdata, byte len) {
         size = len;
     }
 
-    if (size > MAX_SERIAL_RECV_NUM - 1) { //for '\n'
-        size = MAX_SERIAL_RECV_NUM - 2; //error , and append '@'
+    if (size > MAX_SERIAL_RECV_NUM) { //for '\n'
+        size = MAX_SERIAL_RECV_NUM + 1; //error , and append '@'
         ret = ES_OVERMAX;
         //return ES_OVERMAX;
     }
-    snddata = (byte*) malloc(MAX_SERIAL_RECV_NUM);
-    memset(snddata, 0, MAX_SERIAL_RECV_NUM);
-    if (len != 0) {
-        byte i;
-        for (i = 0; i < size; i++) {
-            snddata[i] = sdata[i];
-        }
-    } else {
-        strcpy(snddata, sdata);
+    serialdata = (byte*) malloc(MAX_SERIAL_RECV_NUM + 2);
+    if (serialdata == null) {
+        return E_MEMORY_OVER;
     }
+    memset(serialdata, 0, MAX_SERIAL_RECV_NUM + 2);
+    memcpy(serialdata, sdata, size);
     if (ret == ES_OVERMAX) {
-        *(snddata + size++) = '@';
+        *(serialdata + size++) = '@';
     }
     snd_data = (serial_data_t*) malloc(sizeof(serial_data_t));
-    snd_data->sdata = snddata;
+    if (snd_data == null) {
+        free(serialdata);
+        return E_MEMORY_OVER;
+    }
+    memset(snd_data, 0, sizeof(serial_data_t));
+    snd_data->sdata = serialdata;
     snd_data->len = size;
-    serial_snd_size++;
-    if ((ret = sendMessage(MSG_UART_SEND, snd_data)) != E_OK) {
-        free(snddata);
+    if ((ret = sendMessage(MSG_UART_SEND, (void*) snd_data)) != E_OK) {
+        free(serialdata);
         free(snd_data);
     }
     return ret;
@@ -161,7 +144,7 @@ interrupt 4
             serial_rctx.token = SBUF;
         } else if (serial_rctx.state == (1 << STATE_LENGTH)) {
             serial_rctx.state = serial_rctx.state << 1;
-            serial_rctx.len = SBUF;
+            serial_rctx.len = 4;//SBUF;
             if (serial_rctx.len > (MAX_SERIAL_RECV_NUM - 1)) {
                 ret = SERIAL_ERROR_OVERLOAD;
                 goto SERIAL_ERROR;

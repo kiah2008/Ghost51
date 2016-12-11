@@ -22,7 +22,6 @@ interrupt 1
     TF0 = 0;
     TH0=0x4c;
     TL0=0;
-
     sendMessage(MSG_SYSTEM_TICK, 0);
     ET0 = 1;
 }

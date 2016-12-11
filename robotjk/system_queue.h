@@ -23,6 +23,7 @@ typedef enum {
     //MSG_EXT_INT,
     MSG_DUMP_STATE,
     MSG_KEY_INPUT,
+    MSG_KEY_MODE_CHANGE,
     MSG_INVALID = 0x0F
 } MessageType;
 

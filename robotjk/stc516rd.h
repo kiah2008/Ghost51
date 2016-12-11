@@ -165,7 +165,10 @@ sbit  P      =   PSW^0;
 sfr  ACC     =   0xE0;			 
 sfr  B       =   0xF0;			 
 
-sfr  CKCON      =   0x8F;			 
+sfr  CKCON      =   0x8F;
+
+//added
+sfr WDT_CONTR = 0xE1;
 
 #endif
 
