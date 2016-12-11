@@ -54,18 +54,11 @@ void putByte(byte byte) {
     ES = 1;
 }
 
-void putString(string string, byte sum) {
-    if (sum) {
-        while (sum--) {
-            putByte(*string++);
-        }
-    } else {
-        while (string != null) {
-            if (*string == '\n') {
-                putByte('\r');
-            }
-            putByte(*string++);
-        }
+void putString(string string) {
+    ushort len = strlen(string);
+    ushort i = 0;
+    for (; i < len; i++) {
+        putByte(string[i]);
     }
 }
 
@@ -85,10 +78,10 @@ void initializeUart(void) {
     memset(&serial_rctx, 0, sizeof(serial_rctx));
     serial_rctx.state = 1 << STATE_MAGIC;
     serial_rctx.token = INVALID;
-    serial_rctx.dataun.datablock = malloc(sizeof(serial_data_t));
-    serial_rctx.dataun.datablock->len = 0;
-    serial_rctx.dataun.datablock->sdata = (byte*) malloc(MAX_SERIAL_RECV_NUM);
-    memset(serial_rctx.dataun.datablock->sdata, 0, MAX_SERIAL_RECV_NUM);
+    serial_rctx.datablock = malloc(sizeof(serial_data_t));
+    serial_rctx.datablock->len = 0;
+    serial_rctx.datablock->sdata = (byte*) malloc(MAX_SERIAL_RECV_NUM);
+    memset(serial_rctx.datablock->sdata, 0, MAX_SERIAL_RECV_NUM);
     RI = 0;
     ES = 1;
     REN = 1;
@@ -98,8 +91,9 @@ void restoreReceive() {
     serial_rctx.state = (1 << STATE_MAGIC);
     serial_rctx.token = INVALID;
     serial_rctx.idx = 0;
-    serial_rctx.dataun.datablock->len = 0;
-    memset(serial_rctx.dataun.datablock->sdata, 0, MAX_SERIAL_RECV_NUM);
+    serial_rctx.datablock->len = 0;
+    serial_rctx.datablock->recvToken = INVALID;
+    memset(serial_rctx.datablock->sdata, 0, MAX_SERIAL_RECV_NUM);
     ES = 1;
     REN = 1;
 }
@@ -149,6 +143,10 @@ byte uartSendData(char* sdata, byte len) {
     return ret;
 }
 
+/*
+ * data format
+ * MAGIC(0xEF) TOKEN(0xFF) LEN(0xFF) CONTENT
+ */
 static void uartInterruptHandler(void)
 interrupt 4
 {
@@ -163,7 +161,7 @@ interrupt 4
             serial_rctx.token = SBUF;
         } else if (serial_rctx.state == (1 << STATE_LENGTH)) {
             serial_rctx.state = serial_rctx.state << 1;
-            serial_rctx.len = 2; //SBUF;
+            serial_rctx.len = SBUF;
             if (serial_rctx.len > (MAX_SERIAL_RECV_NUM - 1)) {
                 ret = SERIAL_ERROR_OVERLOAD;
                 goto SERIAL_ERROR;
@@ -174,13 +172,14 @@ interrupt 4
                 ret = SERIAL_ERROR_OVERLOAD;
                 goto SERIAL_ERROR;
             }
-            serial_rctx.dataun.datablock->sdata[serial_rctx.idx] = SBUF;
+            serial_rctx.datablock->sdata[serial_rctx.idx] = SBUF;
             if (++serial_rctx.idx == serial_rctx.len) {
                 // received done!
                 serial_rctx.state = serial_rctx.state << 1;
-                serial_rctx.dataun.datablock->len = serial_rctx.len;
+                serial_rctx.datablock->len = serial_rctx.len;
+                serial_rctx.datablock->recvToken = serial_rctx.token;
                 if(sendMessage(MSG_UART_RECV,
-                                (void*) serial_rctx.dataun.datablock) != E_OK) {
+                                (void*) serial_rctx.datablock) != E_OK) {
                     restoreReceive();
                     return;
                 }
@@ -202,6 +201,6 @@ interrupt 4
 
     SERIAL_ERROR:
     REN = 0;
-    serial_rctx.dataun.error = ret;
+    serial_rctx.datablock->error = ret;
     sendMessage(MSG_UART_IO_ERROR, (void*) &serial_rctx);
 }

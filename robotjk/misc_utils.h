@@ -13,6 +13,7 @@
 extern void delay(uint delayClock);
 extern void delayUs(uint delayTime);
 extern void delay10Ms(uint delayTime);
+extern char decimal2Hex(byte n);
 
 #define SetBit(regiset, offset)         regiset |= 1U << offset
 #define ResetBit(regiset, offset)       regiset &= ~(1U << offset)
@@ -28,7 +29,6 @@ extern void delay10Ms(uint delayTime);
 
 #define UintToUshort1(data)                 ((ushort *)(&data))[0]
 #define UintToUshort0(data)                 ((ushort *)(&data))[1]
-
 
 #define Assert(express)  if (!(express)){printf("\nASSERT: " #express "\n");}   //(void)0
 

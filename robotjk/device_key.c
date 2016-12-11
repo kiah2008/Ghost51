@@ -18,10 +18,6 @@
 static byte idata ScanValueSave = 0xFF;
 static byte JitterCounter = JITTERINTERVAL;
 
-byte getMatrixKey() {
-    return ScanValueSave;
-}
-
 /*****************************************************************************
  * ScandPin
  * P1¿Ú4*4
@@ -56,7 +52,7 @@ void handleKeyService(void) {
     if (P1 != 0xf0) {
         delay(15);
         ScanValueSave = scandPin();
-        notifyInfo((MSG_KEY_INPUT << 8) + ScanValueSave);
+        sendMessage(MSG_KEY_INPUT, (void*)ScanValueSave);
         JitterCounter = JITTERINTERVAL;
     } else {
         ScanValueSave = INVALID;

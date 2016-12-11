@@ -18,7 +18,7 @@ typedef struct {
 } request_t;
 
 //#define CMD_SERIAL_MAGIC 0xEF
-#define CMD_SERIAL_MAGIC 'a'
+#define CMD_SERIAL_MAGIC 0xEF
 
 #define SERIAL_ERROR_OVERLOAD 1
 #define SERIAL_ERROR_RETRY 2
@@ -30,11 +30,12 @@ typedef struct {
 #define MAX_SERIAL_RECV_NUM 16
 #define MAX_SND_BLOCK_NUM 8
 
-
 typedef struct _serial_data {
     byte* sdata;
     //todo: need check bit ?
     //byte checkbit;
+    byte recvToken;
+    byte error;
     byte len;
 } serial_data_t;
 
@@ -43,10 +44,7 @@ typedef struct {
     byte len;
     byte idx;
     byte state;
-    union {
-        serial_data_t* datablock;
-        byte error;
-    } dataun;
+    serial_data_t* datablock;
 } serial_recv_ctx;
 
 #endif /* REQUEST_H_ */

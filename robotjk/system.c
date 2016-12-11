@@ -11,9 +11,10 @@
 #include "stc516rd.h"
 #include "system_queue.h"
 
-byte code disp_table[16] = { 0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07,
+byte code led_table[16] = { 0x3f, 0x06, 0x5b, 0x4f, 0x66, 0x6d, 0x7d, 0x07,
         0x7f,
         0x6f, 0x77, 0x7c, 0x39, 0x5e, 0x79, 0x71 };
+
 static bool code g_debug = true;
 static bool EASave;
 static byte volatile CriticalNesting = 0;
@@ -24,6 +25,7 @@ sbit KEYEXT1 = P3 ^ 3;
 extern void initializeSystemTick(void);
 extern void initializeUart(void);
 extern byte uartSendData(char* sdata, byte len);
+
 
 void initialize(void) {
     EA = 0;
@@ -64,7 +66,7 @@ void display(ushort num) {
     rp1 = P2;
     for (i = 0; i < 60; i++) {
         for (j = 0; j < 4; j++) {
-            P0 = disp_table[bits[j]]; //LED Value
+            P0 = led_table[bits[j]]; //LED Value
             P2 = j; //bit select
             delay(5);
         }

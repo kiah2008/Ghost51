@@ -6,6 +6,7 @@
  */
 #include "data_type.h"
 #include "system_queue.h"
+#include "misc_utils.h"
 #include <string.h>
 #include <stdlib.h>
 #include "stc516rd.h"
@@ -99,18 +100,17 @@ extern void handleKeyService(void);
 extern void putString(string string, byte sum);
 extern void restoreReceive();
 extern void putByte(byte byte);
-extern byte code disp_table[16];
+extern byte code led_table[16];
 extern byte uartSendData(char* sdata, byte len);
-extern bool g_debug;
+
 void startMessageLoop() {
     msg_t* messageData = null;
-    ushort key;
-    serial_recv_ctx* serial_data = null;
-    serial_data_t* serial_block = null;
+    byte key;
+    serial_recv_ctx* serial_rctx = null;
+    serial_data_t* serial_data = null;
     byte i = 0;
-    if (g_debug) {
-        log("loop entered!");
-    }
+    log("loop entered!");
+
     while (true) {
         messageData = pendMessageQueue();
         if (messageData == null) {
@@ -129,10 +129,11 @@ void startMessageLoop() {
             }
 #endif
 
-            if (secInterval++ > SECOND_INTERVAL_MAX) {
+            if (secInterval++ >= SECOND_INTERVAL_MAX) {
                 secInterval = 0;
             }
-            if (g_debug && sMessageQueue.total >= 10) {
+
+            if (sMessageQueue.total >= 10) {
                 //begin dump
                 log("queue warning!");
             }
@@ -143,36 +144,51 @@ void startMessageLoop() {
             break;
 #endif
         case MSG_UART_RECV:
-            serial_data = (serial_recv_ctx*) messageData->datavalue;
-            putString("OK\n", 3);
+            serial_data = (serial_data_t*) messageData->datavalue;
+            putString("OK");
+            putByte(decimal2Hex(serial_data->recvToken / 16));
+            putByte(decimal2Hex(serial_data->recvToken % 16));
+            putByte('\n');
+            //handle data
             restoreReceive();
             break;
         case MSG_UART_SEND:
-            serial_block = (serial_data_t*) messageData->datavalue;
-            if (serial_block != 0) {
-                if (serial_block->sdata != null) {
-                    for (i = 0; i < serial_block->len; i++) {
-                        putByte(serial_block->sdata[i]);
+            serial_data = (serial_data_t*) messageData->datavalue;
+            if (serial_data != 0) {
+                if (serial_data->sdata != null) {
+                    for (i = 0; i < serial_data->len; i++) {
+                        putByte(serial_data->sdata[i]);
                     }
                     putByte('\n');
                     //free data
-                    free(serial_block->sdata);
+                    free(serial_data->sdata);
                 }
-                free(serial_block);
+                free(serial_data);
             }
 
+            break;
+        case MSG_KEY_INPUT:
+            key = (byte) messageData->datavalue;
+            putString("KEY");
+            putByte(decimal2Hex(key / 16));
+            putByte(decimal2Hex(key % 16));
+            putByte('\n');
             break;
         case MSG_DUMP_STATE:
 
             break;
         case MSG_UART_IO_ERROR:
-            serial_data = (serial_recv_ctx*) messageData->datavalue;
-            //putString("BAD", 3);
-            if (serial_data->token != INVALID) {
-                putByte(disp_table[serial_data->token / 16]);
-                putByte(disp_table[serial_data->token % 16]);
+            serial_rctx = (serial_recv_ctx*) messageData->datavalue;
+            putString("BAD");
+            if (serial_rctx->datablock->recvToken != INVALID) {
+                putByte(decimal2Hex(serial_rctx->datablock->recvToken / 16));
+                putByte(decimal2Hex(serial_rctx->datablock->recvToken % 16));
+            } else {
+                putByte(decimal2Hex(0));
+                putByte(decimal2Hex(0));
             }
-            putByte('0' + serial_data->dataun.error);
+            putByte(decimal2Hex(serial_rctx->datablock->error / 16));
+            putByte(decimal2Hex(serial_rctx->datablock->error % 16));
             putByte('\n');
             restoreReceive();
             break;
